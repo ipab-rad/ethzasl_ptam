@@ -1,5 +1,4 @@
 // Copyright 2008 Isis Innovation Limited
-#include "ptam/OpenGL.h"
 #include "ptam/Tracker.h"
 #include "ptam/MEstimator.h"
 #include "ptam/ShiTomasi.h"
@@ -9,7 +8,6 @@
 #include <ptam/Params.h>
 
 #include <cvd/utility.h>
-#include <cvd/gl_helpers.h>
 #include <cvd/fast_corner.h>
 #include <cvd/vision.h>
 #include <TooN/wls.h>
@@ -39,9 +37,6 @@ Tracker::Tracker(ImageRef irVideoSize, const ATANCamera &c, Map &m, MapMaker &mm
 {
   mCurrentKF.reset(new KeyFrame);
   mCurrentKF->bFixed = false;
-  GUI.RegisterCommand("Reset", GUICommandCallBack, this);
-  GUI.RegisterCommand("KeyPress", GUICommandCallBack, this);
-  GUI.RegisterCommand("PokeTracker", GUICommandCallBack, this);
   TrackerData::irImageSize = mirSize;
 
   //Weiss{
@@ -143,18 +138,6 @@ void Tracker::TrackFrame(Image<CVD::byte> &imFrame, bool bDraw)
 
   // From now on we only use the keyframe struct!
   mnFrame++;
-
-  if(mbDraw)
-  {
-    glDrawPixels(mCurrentKF->aLevels[0].im);
-    if(GV2.GetInt("Tracker.DrawFASTCorners",0, SILENT))
-    {
-      glColor3f(1,0,1);  glPointSize(1); glBegin(GL_POINTS);
-      for(unsigned int i=0; i<mCurrentKF->aLevels[0].vCorners.size(); i++)
-        glVertex(mCurrentKF->aLevels[0].vCorners[i]);
-      glEnd();
-    }
-  }
 
   // Decide what to do - if there is a map, try to track the map ...
   if(mMap.IsGood())
@@ -304,37 +287,7 @@ bool Tracker::AttemptRecovery()
 // Draw the reference grid to give the user an idea of wether tracking is OK or not.
 void Tracker::RenderGrid()
 {
-
-  ComputeGrid();
-  int dim0 = mProjVertices.size().x;
-  int dim1 = mProjVertices.size().y;
-
-  // The colour of the ref grid shows if the coarse stage of tracking was used
-  // (it's turned off when the camera is sitting still to reduce jitter.)
-  if(mbDidCoarse)
-    glColor4f(.0, 0.5, .0, 0.6);
-  else
-    glColor4f(0,0,0,0.6);
-
-  glEnable(GL_LINE_SMOOTH);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-  glLineWidth(2);
-  for(int i=0; i<dim0; i++)
-  {
-    glBegin(GL_LINE_STRIP);
-    for(int j=0; j<dim1; j++)
-      glVertex(mProjVertices[i][j]);
-    glEnd();
-
-    glBegin(GL_LINE_STRIP);
-    for(int j=0; j<dim1; j++)
-      glVertex(mProjVertices[j][i]);
-    glEnd();
-  };
-
-  glLineWidth(1);
-  glColor3f(1,0,0);
+  return;
 }
 
 // Draw the reference grid to give the user an idea of wether tracking is OK or not.
@@ -572,16 +525,6 @@ void Tracker::TrailTracking_Start()
 int Tracker::TrailTracking_Advance()
 {
   int nGoodTrails = 0;
-  if(mbDraw)
-  {
-    glPointSize(5);
-    glLineWidth(2);
-    glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_LINE_SMOOTH);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
-    glBegin(GL_LINES);
-  }
   
   int level = PtamParameters::fixparams().InitLevel;
   MiniPatch BackwardsPatch;
@@ -614,24 +557,12 @@ int Tracker::TrailTracking_Advance()
         nGoodTrails++;
       }
     }
-    if(mbDraw)
-    {
-      if(!bFound)
-        glColor3f(0,1,1); // Failed trails flash purple before dying.
-      else
-        glColor3f(1,1,0);
-      glVertex(LevelZeroPos(trail.irInitialPos, level));
-      if(bFound) glColor3f(1,0,0);
-      glVertex(LevelZeroPos(trail.irCurrentPos, level));
-    }
     if(!bFound) // Erase from list of trails if not found this frame.
     {
       mlTrails.erase(i);
     }
     i = next;
   }
-  if(mbDraw)
-    glEnd();
 
   mPreviousFrameKF = mCurrentKF;
   return nGoodTrails;
@@ -965,26 +896,6 @@ void Tracker::TrackMap()
     mse3CamFromWorld = SE3<>::exp(v6Update) * mse3CamFromWorld;
     v6LastUpdate = v6Update;
   };
-
-  if(mbDraw)
-  {
-    glPointSize(6);
-    glEnable(GL_BLEND);
-    glEnable(GL_POINT_SMOOTH);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBegin(GL_POINTS);
-    for(vector<TrackerData*>::reverse_iterator it = vIterationSet.rbegin();
-        it!= vIterationSet.rend();
-        it++)
-    {
-      if(! (*it)->bFound)
-        continue;
-      glColor(gavLevelColors[(*it)->nSearchLevel]);
-      glVertex((*it)->v2Image);
-    }
-    glEnd();
-    glDisable(GL_BLEND);
-  }
 
   // Update the current keyframe with info on what was found in the frame.
   // Strictly speaking this is unnecessary to do every frame, it'll only be

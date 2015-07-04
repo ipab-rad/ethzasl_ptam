@@ -1,13 +1,13 @@
-gui: True
-ImageSizeX: 752
-ImageSizeY: 480
+gui: False
+ImageSizeX: 320
+ImageSizeY: 240
 ARBuffer_width: 1200
 ARBuffer_height: 900
 WiggleScale: 0.1
 BundleMEstimator: Tukey
 TrackerMEstimator: Tukey
 MinTukeySigma: 0.4
-CandidateMinSTScore: 70  
+CandidateMinSTScore: 70
 Calibrator_BlurSigma: 1.0
 Calibrator_MeanGate: 10
 Calibrator_MinCornersForGrabbedImage: 20
@@ -31,11 +31,20 @@ FASTMethod: OAST16
 MaxStereoInitLoops: 4
 AutoInitPixel: 20
 
-# --- bluefox - low distort lens  --- 
-Cam_fx: 0.795574
-Cam_fy: 1.25149
-Cam_cx: 0.50417
-Cam_cy: 0.51687
-Cam_s: 0.482014
+# --- bluefox - low distort lens  ---
+# Cam_fx: 0.795574
+# Cam_fy: 1.25149
+# Cam_cx: 0.50417
+# Cam_cy: 0.51687
+# Cam_s: 0.482014
 # -----------------------------------
+
+# --- Microsoft USB cam  ---
+Cam_fx: 0.962433
+Cam_fy: 1.28016
+Cam_cx: 0.538064
+Cam_cy: 0.492523
+Cam_s: 0.00548832
+# -----------------------------------
+
 

@@ -28,11 +28,8 @@ generate_dynamic_reconfigure_options(cfg/PTAMVisualizerParams.cfg cfg/PtamParams
 catkin_package(CATKIN_DEPENDS roscpp dynamic_reconfigure std_msgs image_transport dynamic_reconfigure sensor_msgs ptam_com tf visualization_msgs cv_bridge)
 
 set(PTAM_SOURCE_FILES         
-	src/GLWindow2.cc       
 	src/main.cc      
-	src/MapViewer.cc 
 	src/ATANCamera.cc          
-	src/GLWindowMenu.cc    
 	src/Map.cc       
 	src/MiniPatch.cc    
 	src/ShiTomasi.cc         
@@ -62,14 +59,11 @@ set(PTAM_HEADER_FILES
   include/ptam/ShiTomasi.h         
   include/ptam/Tracker.h
   include/ptam/Bundle.h            
-  include/ptam/GLWindow2.h         
   include/ptam/Map.h           
   include/ptam/MiniPatch.h    
   include/ptam/SmallBlurryImage.h 
   include/ptam/CalibCornerPatch.h  
-  include/ptam/GLWindowMenu.h      
   include/ptam/MapMaker.h      
-  include/ptam/OpenGL.h       
   include/ptam/SmallMatrixOpts.h
   include/ptam/CalibImage.h        
   include/ptam/HomographyInit.h    
@@ -104,7 +98,7 @@ link_directories(
   ${PROJECT_SOURCE_DIR}/thirdparty/agast/lib
 )
 
-set(PTAM_LIBRARIES GL glut cvd GVars3_headless agast blas lapack)
+set(PTAM_LIBRARIES cvd GVars3_headless agast /home/nao/lapack-3.5.0/build/lib/libblas.so /home/nao/lapack-3.5.0/build/lib/liblapack.so)
 
 add_definitions(-DCVD_HAVE_TOON)
 add_definitions(-DKF_REPROJ)
@@ -122,30 +116,3 @@ add_dependencies(ptam DEPS ${${PROJECT_NAME}_EXPORTED_TARGETS}})
 target_link_libraries(ptam ${PTAM_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 
 
-# Camera calibrator 
-add_executable(cameracalibrator ${CALIBRATOR_FILES})
-add_dependencies(cameracalibrator DEPS ${${PROJECT_NAME}_EXPORTED_TARGETS}})
-target_link_libraries(cameracalibrator ${PTAM_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
-
-# PTAM remote control
-# this is unfortunately neccessary to close app, when opencvwindow gets closed
-include(FindPkgConfig)
-if (PKG_CONFIG_FOUND AND UNIX AND NOT APPLE)
-   pkg_check_modules(GTK gtk+-2.0)
-   if (GTK_FOUND)
-      include_directories(${GTK_INCLUDE_DIRS})
-      link_directories(${GTK_LIBRARY_DIRS})
-      add_definitions(-DHAVE_GTK)
-      # Hack around gdk-pixbuf move issues for now
-      # http://ubuntuforums.org/showthread.php?t=1596930
-      include_directories(/usr/include/gdk-pixbuf-2.0)
-   endif(GTK_FOUND)
-endif(PKG_CONFIG_FOUND AND UNIX AND NOT APPLE)
-
-add_executable(remote_ptam src/RemotePtam.cpp)
-add_dependencies(remote_ptam DEPS ${${PROJECT_NAME}_EXPORTED_TARGETS}})
-target_link_libraries(remote_ptam ${GTK_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
-
-add_executable(ptam_visualizer src/PTAMVisualizer.cpp)
-add_dependencies(ptam_visualizer DEPS ${${PROJECT_NAME}_EXPORTED_TARGETS}})
-target_link_libraries(ptam_visualizer ${catkin_LIBRARIES})
