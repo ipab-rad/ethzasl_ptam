@@ -112,6 +112,7 @@ IF(CMAKE_BUILD_TYPE MATCHES Release)
  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsee -funsafe-loop-optimizations -fno-signed-zeros -fno-math-errno -funroll-loops")
 ENDIF(CMAKE_BUILD_TYPE MATCHES Release)
 add_dependencies(ptam DEPS ${${PROJECT_NAME}_EXPORTED_TARGETS}})
+add_dependencies(ptam ${PROJECT_NAME}_gencfg)
 
 target_link_libraries(ptam ${PTAM_LIBRARIES} ${OpenCV_LIBS} ${catkin_LIBRARIES})
 
