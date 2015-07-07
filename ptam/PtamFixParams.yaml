@@ -1,4 +1,5 @@
 gui: False
+Scale: 0.3
 ImageSizeX: 320
 ImageSizeY: 240
 ARBuffer_width: 1200
@@ -22,7 +23,7 @@ GLWindowMenu_mgvnMenuTextOffset: 20
 InitLevel: 1
 MaxKFDistWiggleMult: 1
 MaxPatchesPerFrame: 300
-MaxKF: 15
+MaxKF: 1000
 parent_frame: world
 TrackingQualityFoundPixels: 50
 UseKFPixelDist: True
@@ -40,11 +41,18 @@ AutoInitPixel: 20
 # -----------------------------------
 
 # --- Microsoft USB cam  ---
-Cam_fx: 0.962433
-Cam_fy: 1.28016
-Cam_cx: 0.538064
-Cam_cy: 0.492523
-Cam_s: 0.00548832
+# Cam_fx: 0.962433
+# Cam_fy: 1.28016
+# Cam_cx: 0.538064
+# Cam_cy: 0.492523
+# Cam_s: 0.00548832
 # -----------------------------------
 
+# --- Nao (Doyle) top-cam  ---
+Cam_fx: 0.905019
+Cam_fy: 1.20501
+Cam_cx: 0.502181
+Cam_cy: 0.514128
+Cam_s: 0.254843
+# -----------------------------------
 
