@@ -18,9 +18,21 @@ using namespace CVD;
 using namespace std;
 using namespace GVars3;
 
+using boost::interprocess::open_only;
+using boost::interprocess::read_only;
+using boost::interprocess::mapped_region;
+using boost::interprocess::named_mutex;
+
+using ros::serialization::IStream;
+using ros::serialization::Serializer;
 
 System::System() :
-  nh_("vslam"), image_nh_(""), first_frame_(true), mpMap(NULL) {
+  nh_("vslam"),
+  image_nh_(""),
+  shdmem_(open_only, "grey_camera", read_only),
+  shdmem_mtx_(open_only, "grey_camera"),
+  first_frame_(true),
+  mpMap(NULL) {
 
   pub_pose_ = nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("pose", 1);
   pub_pose_world_ =
@@ -42,9 +54,12 @@ System::System() :
   }
 
   image_transport::ImageTransport it(image_nh_);
-  sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this,
-                            image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
+  // sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this,
+  //                           image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
   pub_preview_image_ = it.advertise("vslam/preview", 1);
+
+  shdmem_region_ = new mapped_region(shdmem_, read_only);
+  shdmem_ptr_ = static_cast<uint8_t*>(shdmem_region_->get_address());
 }
 
 
@@ -61,26 +76,33 @@ void System::init(const CVD::ImageRef& size) {
 
 
 void System::Run() {
+  sensor_msgs::Image image;
+  sensor_msgs::CameraInfo cam_info;
+  vector<float> transform(16);
+  vector<float> head_angles(2);  // yaw, pitch
+  ros::Rate r(20);
   while (ros::ok()) {
     //    ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0.01));
     //    image_queue_.callAvailable();
 
     ros::getGlobalCallbackQueue()->callAvailable();
-    image_queue_.callAvailable(ros::WallDuration(0.01));
+    ReadFromSharedMemory(image, cam_info, transform, head_angles);
+    imageCallback(image);
+    r.sleep();
   }
 }
 
-void System::imageCallback(const sensor_msgs::ImageConstPtr& img) {
+void System::imageCallback(const sensor_msgs::Image& img) {
   //  static ros::Time t = img->header.stamp;
 
 
-  ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::MONO8 &&
-             img->step == img->width);
+  ROS_ASSERT(img.encoding == sensor_msgs::image_encodings::MONO8 &&
+             img.step == img.width);
 
   const VarParams& varParams = PtamParameters::varparams();
 
   if (first_frame_) {
-    init(CVD::ImageRef(img->width, img->height));
+    init(CVD::ImageRef(img.width, img.height));
     first_frame_ = false;
   }
 
@@ -89,41 +111,41 @@ void System::imageCallback(const sensor_msgs::ImageConstPtr& img) {
     sensor_msgs::Imu imu;
 
 
-    if (!findClosest(img->header.stamp, imu_msgs_, &imu, 0.01)) {
+    if (!findClosest(img.header.stamp, imu_msgs_, &imu, 0.01)) {
       ROS_WARN("no imu match, skipping frame");
       return;
     }
-    if (!transformQuaternion(img->header.frame_id, imu.header, imu.orientation,
+    if (!transformQuaternion(img.header.frame_id, imu.header, imu.orientation,
                              imu_orientation)) {
       return;
     }
   }
 
 
-//  -------------------
+  //  -------------------
   // TODO: avoid copy, by calling TrackFrame, with the ros image, because there is another copy inside TrackFrame
   // CVD::BasicImage<CVD::byte> img_tmp((CVD::byte*)&img->data[0],
   //                                    CVD::ImageRef(img->width, img->height));
   // CVD::copy(img_tmp, img_bw_);
 
-  for (int i = 0; i < img->height; ++i) {
-    for (int j = 0; j < img->width; ++j) {
-      int idx = 3 * (i * img->width + j);
-      img_bw_[i][j] =  0.2126 * img->data[idx] +
-                       0.7152 * img->data[idx + 1] +
-                       0.0722 * img->data[idx + 2];
-    }
-  }
-
+  // for (int i = 0; i < img->height; ++i) {
+  //   for (int j = 0; j < img->width; ++j) {
+  //     int idx = 3 * (i * img->width + j);
+  //     img_bw_[i][j] =  0.2126 * img->data[idx] +
+  //                      0.7152 * img->data[idx + 1] +
+  //                      0.0722 * img->data[idx + 2];
+  //   }
+  // }
+  memcpy(img_bw_.data(), img.data.data(), img.data.size());
   bool tracker_draw = false;
 
   static gvar3<int> gvnDrawMap("DrawMap", 0, HIDDEN | SILENT);
 
   mpTracker->TrackFrame(img_bw_, tracker_draw, imu_orientation);
 
-  publishPoseAndInfo(img->header);
+  publishPoseAndInfo(img.header);
 
-  publishPreviewImage(img_bw_, img->header);
+  publishPreviewImage(img_bw_, img.header);
   std::cout << mpMapMaker->getMessageForUser();
 }
 
@@ -553,7 +575,37 @@ void System::quaternionToRotationMatrix(const geometry_msgs::Quaternion& q,
   //  R = TooN::SO3<double>::exp(TooN::makeVector<double>(q.x, q.y, q.z) * acos(q.w) * 2.0 / sqrt(q.x * q.x + q.y * q.y + q.z * q.z));
 }
 
+bool System::ReadFromSharedMemory(sensor_msgs::Image& image,
+                                  sensor_msgs::CameraInfo& cam_info,
+                                  std::vector<float>& transform,
+                                  std::vector<float>& head_angles) {
+  if (!shdmem_mtx_.try_lock()) return false;
+  uint8_t* ptr = shdmem_ptr_;
 
+  uint32_t cam_info_size;
+  memcpy(&cam_info_size, ptr, sizeof(cam_info_size));
+  ptr += sizeof(cam_info_size);
+
+  IStream cam_info_stream(ptr, cam_info_size);
+  Serializer<sensor_msgs::CameraInfo>::read(cam_info_stream, cam_info);
+  ptr += cam_info_size;
+
+  uint32_t image_size;
+  memcpy(&image_size, ptr, sizeof(image_size));
+  ptr += sizeof(image_size);
+
+  IStream image_stream(ptr, image_size);
+  Serializer<sensor_msgs::Image>::read(image_stream, image);
+  ptr += image_size;
+
+  memcpy(transform.data(), ptr, sizeof(float) * transform.size());
+  ptr += sizeof(float) * transform.size();
+
+  memcpy(head_angles.data(), ptr, sizeof(float) * head_angles.size());
+  shdmem_mtx_.unlock();
+
+  return true;
+}
 
 void System::GUICommandCallBack(void* ptr, string sCommand, string sParams) {
   if (sCommand == "quit" || sCommand == "exit")
