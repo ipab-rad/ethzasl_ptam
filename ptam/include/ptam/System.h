@@ -89,8 +89,7 @@ class System {
   GLWindow2* mGLWindow;
   MapViewer* mpMapViewer;
 
-  CVD::Image<CVD::byte > img_bw_;
-  CVD::Image<CVD::Rgb<CVD::byte> > img_rgb_;
+  CVD::BasicImage<CVD::byte >* img_bw_;
 
   Map* mpMap;
   MapMaker* mpMapMaker;
@@ -102,14 +101,14 @@ class System {
   void init(const CVD::ImageRef& size);
 
   void publishPoseAndInfo(const std_msgs::Header& header);
-  void publishPreviewImage(CVD::Image<CVD::byte>& img,
+  void publishPreviewImage(CVD::BasicImage<CVD::byte>& img,
                            const std_msgs::Header& header);
   bool pointcloudservice(ptam_com::PointCloudRequest& req,
                          ptam_com::PointCloudResponse& resp);
   bool keyframesservice(ptam_com::KeyFrame_srvRequest& req,
                         ptam_com::KeyFrame_srvResponse& resp);
 
-  void imageCallback(const sensor_msgs::Image& img);
+  void imageCallback(sensor_msgs::Image& img);
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
   void keyboardCallback(const std_msgs::StringConstPtr& kb_input);
 

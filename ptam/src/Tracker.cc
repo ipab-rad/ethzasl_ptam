@@ -89,7 +89,7 @@ void Tracker::Reset() {
   mbJustRecoveredSoUseCoarse = false;
 }
 
-void Tracker::TrackFrame(CVD::Image<CVD::byte>& imFrame, bool bDraw,
+void Tracker::TrackFrame(CVD::BasicImage<CVD::byte>& imFrame, bool bDraw,
                          const TooN::SO3<>& imu) {
   mso3CurrentImu = imu;
   TrackFrame(imFrame, bDraw);
@@ -101,7 +101,7 @@ void Tracker::TrackFrame(CVD::Image<CVD::byte>& imFrame, bool bDraw,
 // It figures out what state the tracker is in, and calls appropriate internal tracking
 // functions. bDraw tells the tracker wether it should output any GL graphics
 // or not (it should not draw, for example, when AR stuff is being shown.)
-void Tracker::TrackFrame(Image<CVD::byte>& imFrame, bool bDraw) {
+void Tracker::TrackFrame(BasicImage<CVD::byte>& imFrame, bool bDraw) {
   mbDraw = bDraw;
   mMessageForUser.str("");   // Wipe the user message clean
   mMapMaker.resetMessageForUser();

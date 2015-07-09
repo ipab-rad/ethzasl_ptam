@@ -64,9 +64,6 @@ System::System() :
 
 
 void System::init(const CVD::ImageRef& size) {
-  img_bw_.resize(size);
-  img_rgb_.resize(size);
-
   mpCamera = new ATANCamera("Camera");
 
   mpMap = new Map;
@@ -80,7 +77,7 @@ void System::Run() {
   sensor_msgs::CameraInfo cam_info;
   vector<float> transform(16);
   vector<float> head_angles(2);  // yaw, pitch
-  ros::Rate r(20);
+  ros::Rate r(5);
   while (ros::ok()) {
     //    ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0.01));
     //    image_queue_.callAvailable();
@@ -92,7 +89,7 @@ void System::Run() {
   }
 }
 
-void System::imageCallback(const sensor_msgs::Image& img) {
+void System::imageCallback(sensor_msgs::Image& img) {
   //  static ros::Time t = img->header.stamp;
 
 
@@ -136,17 +133,23 @@ void System::imageCallback(const sensor_msgs::Image& img) {
   //                      0.0722 * img->data[idx + 2];
   //   }
   // }
-  memcpy(img_bw_.data(), img.data.data(), img.data.size());
+  img_bw_ = new BasicImage<CVD::byte >(
+    img.data.data(),
+    CVD::ImageRef(img.width, img.height));
+
+  //memcpy(img_bw_.data(), img.data.data(), img.data.size());
   bool tracker_draw = false;
 
   static gvar3<int> gvnDrawMap("DrawMap", 0, HIDDEN | SILENT);
 
-  mpTracker->TrackFrame(img_bw_, tracker_draw, imu_orientation);
+  mpTracker->TrackFrame(*img_bw_, tracker_draw, imu_orientation);
 
   publishPoseAndInfo(img.header);
 
-  publishPreviewImage(img_bw_, img.header);
+  publishPreviewImage(*img_bw_, img.header);
   std::cout << mpMapMaker->getMessageForUser();
+
+  delete img_bw_;
 }
 
 
@@ -250,21 +253,31 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
     TooN::Matrix<3, 3, double> r_ptam = pose.get_rotation().get_matrix();
     TooN::Vector<3, double> t_ptam =  pose.get_translation();
 
-    tf::StampedTransform transform_ptam(tf::Transform(tf::Matrix3x3(r_ptam(0, 0),
-                                                                    r_ptam(0, 1), r_ptam(0, 2), r_ptam(1, 0), r_ptam(1, 1), r_ptam(1, 2), r_ptam(2,
-                                                                        0), r_ptam(2, 1), r_ptam(2, 2))
-                                                      , tf::Vector3(t_ptam[0] / scale, t_ptam[1] / scale, t_ptam[2] / scale)),
-                                        header.stamp, frame_id, PtamParameters::fixparams().parent_frame);
+    tf::StampedTransform transform_ptam(
+      tf::Transform(tf::Matrix3x3(r_ptam(0, 0), r_ptam(0, 1), r_ptam(0, 2),
+                                  r_ptam(1, 0), r_ptam(1, 1), r_ptam(1, 2),
+                                  r_ptam(2, 0), r_ptam(2, 1), r_ptam(2, 2)),
+                    tf::Vector3(t_ptam[0] / scale,
+                                t_ptam[1] / scale,
+                                t_ptam[2] / scale)),
+      header.stamp,
+      frame_id,
+      PtamParameters::fixparams().parent_frame);
 
     //camera in the world frame
     TooN::Matrix<3, 3, double> r_world = pose.get_rotation().get_matrix().T();
     TooN::Vector<3, double> t_world =  - r_world * pose.get_translation();
 
-    tf::StampedTransform transform_world(tf::Transform(tf::Matrix3x3(r_world(0, 0),
-                                                                     r_world(0, 1), r_world(0, 2), r_world(1, 0), r_world(1, 1), r_world(1, 2),
-                                                                     r_world(2, 0), r_world(2, 1), r_world(2, 2))
-                                                       , tf::Vector3(t_world[0] / scale, t_world[1] / scale, t_world[2] / scale)),
-                                         header.stamp, PtamParameters::fixparams().parent_frame, frame_id);
+    tf::StampedTransform transform_world(
+      tf::Transform(tf::Matrix3x3(r_world(0, 0), r_world(0, 1), r_world(0, 2),
+                                  r_world(1, 0), r_world(1, 1), r_world(1, 2),
+                                  r_world(2, 0), r_world(2, 1), r_world(2, 2)),
+                    tf::Vector3(t_world[0] / scale,
+                                t_world[1] / scale,
+                                t_world[2] / scale)),
+      header.stamp,
+      PtamParameters::fixparams().parent_frame,
+      frame_id);
 
     tf_pub_.sendTransform(transform_world);
 
@@ -333,73 +346,75 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
       msg_info->keyframes = mpMap->vpKeyFrames.size();
       pub_info_.publish(msg_info);
     }
-  };
+  }
 }
 
 
-void System::publishPreviewImage(CVD::Image<CVD::byte>& img,
+void System::publishPreviewImage(CVD::BasicImage<CVD::byte>& img,
                                  const std_msgs::Header& header) {
+  if (pub_preview_image_.getNumSubscribers() == 0)
+    return;
+
   CVD::Image<TooN::Vector<2> >& grid = mpTracker->ComputeGrid();
   std::list<Trail>& trails = mpTracker->getTrails();
   bool drawGrid = mpTracker->getTrailTrackingComplete();
   bool drawTrails = mpTracker->getTrailTrackingStarted();
 
-  if (pub_preview_image_.getNumSubscribers() > 0) {
-    CVD::ImageRef sub_size(img.size() / 2);
-    sensor_msgs::ImagePtr img_msg(new sensor_msgs::Image);
-    img_msg->header = header;
-    img_msg->encoding = sensor_msgs::image_encodings::MONO8;
-    img_msg->width = sub_size.x;
-    img_msg->height = sub_size.y;
-    img_msg->step = sub_size.x;
-    img_msg->is_bigendian = 0;
-    img_msg->data.resize(sub_size.x * sub_size.y);
 
-    // subsample image
-    CVD::BasicImage<CVD::byte> img_sub((CVD::byte*)&img_msg->data[0], sub_size);
-    CVD::halfSample(img, img_sub);
+  CVD::ImageRef sub_size(img.size() / 2);
+  sensor_msgs::ImagePtr img_msg(new sensor_msgs::Image);
+  img_msg->header = header;
+  img_msg->encoding = sensor_msgs::image_encodings::MONO8;
+  img_msg->width = sub_size.x;
+  img_msg->height = sub_size.y;
+  img_msg->step = sub_size.x;
+  img_msg->is_bigendian = 0;
+  img_msg->data.resize(sub_size.x * sub_size.y);
 
-    // set opencv pointer to image
-    IplImage* ocv_img = cvCreateImageHeader(cvSize(img_sub.size().x,
-                                                   img_sub.size().y), IPL_DEPTH_8U, 1);
-    ocv_img->imageData = (char*)&img_msg->data[0];
+  // subsample image
+  CVD::BasicImage<CVD::byte> img_sub((CVD::byte*)&img_msg->data[0], sub_size);
+  CVD::halfSample(img, img_sub);
 
-    int dim0 = grid.size().x;
-    int dim1 = grid.size().y;
+  // set opencv pointer to image
+  IplImage* ocv_img = cvCreateImageHeader(cvSize(img_sub.size().x,
+                                                 img_sub.size().y), IPL_DEPTH_8U, 1);
+  ocv_img->imageData = (char*)&img_msg->data[0];
 
-    if (drawGrid) {
-      for (int i = 0; i < dim0; i++) {
-        for (int j = 0; j < dim1 - 1; j++)
-          cvLine( ocv_img, cvPoint(grid[i][j][0] / 2, grid[i][j][1] / 2),
-                  cvPoint(grid[i][j + 1][0] / 2, grid[i][j + 1][1] / 2),
-                  CV_RGB(50, 50, 50)
-                );
+  int dim0 = grid.size().x;
+  int dim1 = grid.size().y;
 
-        for (int j = 0; j < dim1 - 1; j++)
-          cvLine(ocv_img, cvPoint(grid[j][i][0] / 2, grid[j][i][1] / 2),
-                 cvPoint(grid[j + 1][i][0] / 2, grid[j + 1][i][1] / 2),
-                 CV_RGB(50, 50, 50)
-                );
-      }
+  if (drawGrid) {
+    for (int i = 0; i < dim0; i++) {
+      for (int j = 0; j < dim1 - 1; j++)
+        cvLine( ocv_img, cvPoint(grid[i][j][0] / 2, grid[i][j][1] / 2),
+                cvPoint(grid[i][j + 1][0] / 2, grid[i][j + 1][1] / 2),
+                CV_RGB(50, 50, 50)
+              );
+
+      for (int j = 0; j < dim1 - 1; j++)
+        cvLine(ocv_img, cvPoint(grid[j][i][0] / 2, grid[j][i][1] / 2),
+               cvPoint(grid[j + 1][i][0] / 2, grid[j + 1][i][1] / 2),
+               CV_RGB(50, 50, 50)
+              );
     }
-
-    if (drawTrails) {
-
-
-      int level = PtamParameters::fixparams().InitLevel;
-
-      for (std::list<Trail>::iterator i = trails.begin(); i != trails.end(); i++) {
-        cvLine(ocv_img, cvPoint(LevelZeroPos(i->irCurrentPos.x, level) / 2,
-                                LevelZeroPos(i->irCurrentPos.y, level) / 2),
-               cvPoint(LevelZeroPos(i->irInitialPos.x, level) / 2,
-                       LevelZeroPos(i->irInitialPos.y, level) / 2),
-               CV_RGB(0, 0, 0), 2);
-      }
-    }
-
-    pub_preview_image_.publish(img_msg);
-    cvReleaseImageHeader(&ocv_img);
   }
+
+  if (drawTrails) {
+
+
+    int level = PtamParameters::fixparams().InitLevel;
+
+    for (std::list<Trail>::iterator i = trails.begin(); i != trails.end(); i++) {
+      cvLine(ocv_img, cvPoint(LevelZeroPos(i->irCurrentPos.x, level) / 2,
+                              LevelZeroPos(i->irCurrentPos.y, level) / 2),
+             cvPoint(LevelZeroPos(i->irInitialPos.x, level) / 2,
+                     LevelZeroPos(i->irInitialPos.y, level) / 2),
+             CV_RGB(0, 0, 0), 2);
+    }
+  }
+
+  pub_preview_image_.publish(img_msg);
+  cvReleaseImageHeader(&ocv_img);
 }
 
 //Weiss{
