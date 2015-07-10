@@ -38,6 +38,7 @@ System::System() :
   pub_pose_world_ =
     nh_.advertise<geometry_msgs::PoseWithCovarianceStamped> ("pose_world", 1);
   pub_info_ = nh_.advertise<ptam_com::ptam_info> ("info", 1);
+  pub_pose_2d_ = nh_.advertise<geometry_msgs::PoseStamped>("robot_pose", 1);
   srvPC_ = nh_.advertiseService("pointcloud", &System::pointcloudservice, this);
   srvKF_ = nh_.advertiseService("keyframes", &System::keyframesservice, this);
 
@@ -76,14 +77,14 @@ void System::Run() {
   sensor_msgs::Image image;
   sensor_msgs::CameraInfo cam_info;
   vector<float> transform(16);
-  vector<float> head_angles(2);  // yaw, pitch
+  head_angles_.resize(2); // yaw, pitch
   ros::Rate r(5);
   while (ros::ok()) {
     //    ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0.01));
     //    image_queue_.callAvailable();
 
     ros::getGlobalCallbackQueue()->callAvailable();
-    ReadFromSharedMemory(image, cam_info, transform, head_angles);
+    ReadFromSharedMemory(image, cam_info, transform, head_angles_);
     imageCallback(image);
     r.sleep();
   }
@@ -249,7 +250,7 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
 
   if (mpTracker->getTrackingQuality() && mpMap->IsGood()) {
     TooN::SE3<double> pose = mpTracker->GetCurrentPose();
-    //world in the camera frame
+    // world in the camera frame
     TooN::Matrix<3, 3, double> r_ptam = pose.get_rotation().get_matrix();
     TooN::Vector<3, double> t_ptam =  pose.get_translation();
 
@@ -264,7 +265,7 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
       frame_id,
       PtamParameters::fixparams().parent_frame);
 
-    //camera in the world frame
+    // camera in the world frame
     TooN::Matrix<3, 3, double> r_world = pose.get_rotation().get_matrix().T();
     TooN::Vector<3, double> t_world =  - r_world * pose.get_translation();
 
@@ -281,11 +282,36 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
 
     tf_pub_.sendTransform(transform_world);
 
+    if (pub_pose_2d_.getNumSubscribers() > 0) {
+      geometry_msgs::PoseStamped pose_2d_msg;
+      pose_2d_msg.header = header;
+
+      // Position
+      const tf::Vector3& t_tf_ptam = transform_world.getOrigin();
+      pose_2d_msg.pose.position.x = -t_tf_ptam.z();
+      pose_2d_msg.pose.position.y = -t_tf_ptam.x();
+      pose_2d_msg.pose.position.z = t_tf_ptam.y();
+
+      // Orientation
+      tf::Matrix3x3& mat_tf_ptam = transform_world.getBasis();
+      double r, p, y;
+      mat_tf_ptam.getRPY(r, p, y);
+      mat_tf_ptam.setRPY(0, 0, p - head_angles_[0]);
+
+      const tf::Quaternion& q_tf_ptam = transform_world.getRotation();
+      pose_2d_msg.pose.orientation.w = q_tf_ptam.w();
+      pose_2d_msg.pose.orientation.x = q_tf_ptam.x();
+      pose_2d_msg.pose.orientation.y = q_tf_ptam.y();
+      pose_2d_msg.pose.orientation.z = q_tf_ptam.z();
+
+      pub_pose_2d_.publish(pose_2d_msg);
+    }
     if (pub_pose_.getNumSubscribers() > 0 ||
         pub_pose_world_.getNumSubscribers() > 0) {
-      //world in the camera frame
-      geometry_msgs::PoseWithCovarianceStampedPtr msg_pose(new
-                                                           geometry_msgs::PoseWithCovarianceStamped);
+      // world in the camera frame
+      geometry_msgs::PoseWithCovarianceStampedPtr msg_pose(
+        new geometry_msgs::PoseWithCovarianceStamped);
+
       const tf::Quaternion& q_tf_ptam = transform_ptam.getRotation();
       const tf::Vector3& t_tf_ptam = transform_ptam.getOrigin();
       msg_pose->pose.pose.orientation.w = q_tf_ptam.w();
@@ -304,7 +330,7 @@ void System::publishPoseAndInfo(const std_msgs::Header& header) {
       pub_pose_.publish(msg_pose);
 
 
-      //camera in the world frame
+      // camera in the world frame
       const tf::Quaternion& q_tf_world = transform_world.getRotation();
       const tf::Vector3& t_tf_world = transform_world.getOrigin();
       msg_pose->pose.pose.orientation.w = q_tf_world.w();

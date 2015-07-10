@@ -22,6 +22,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <ptam_com/PointCloud.h>
 #include <ptam_com/KeyFrame_srv.h>
 #include <std_msgs/String.h>
@@ -72,6 +73,9 @@ class System {
   ros::Publisher pub_info_;
   ros::ServiceServer srvPC_;
   ros::ServiceServer srvKF_;
+
+  std::vector<float> head_angles_;
+  ros::Publisher pub_pose_2d_;
 
   ros::CallbackQueue image_queue_;
 
