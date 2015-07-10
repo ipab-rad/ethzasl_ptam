@@ -9,7 +9,7 @@ set( MESSAGE_DEPENDENCIES
 )
 
 #Declare build dependencies
-find_package(catkin REQUIRED 
+find_package(catkin REQUIRED
     COMPONENTS
     message_generation
     ${MESSAGE_DEPENDENCIES} )
@@ -28,6 +28,7 @@ add_service_files(DIRECTORY srv
 	FILES
 	KeyFrame_srv.srv
 	PointCloud.srv
+  SetPtamRate.srv
 )
 
 #And now generate the messages

@@ -1,0 +1,4 @@
+# The desired localisation rate
+uint8 rate
+---
+bool status

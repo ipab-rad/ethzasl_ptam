@@ -41,6 +41,7 @@ System::System() :
   pub_pose_2d_ = nh_.advertise<geometry_msgs::PoseStamped>("robot_pose", 1);
   srvPC_ = nh_.advertiseService("pointcloud", &System::pointcloudservice, this);
   srvKF_ = nh_.advertiseService("keyframes", &System::keyframesservice, this);
+  srvRate_ = nh_.advertiseService("set_ptam_rate", &System::SetPtamRate, this);
 
   sub_imu_ = nh_.subscribe("imu", 100, &System::imuCallback, this);
   sub_kb_input_ = nh_.subscribe("key_pressed", 100, &System::keyboardCallback,
@@ -78,7 +79,7 @@ void System::Run() {
   sensor_msgs::CameraInfo cam_info;
   vector<float> transform(16);
   head_angles_.resize(2); // yaw, pitch
-  ros::Rate r(5);
+  rate_ = new ros::Rate(5);
   while (ros::ok()) {
     //    ros::getGlobalCallbackQueue()->callAvailable(ros::WallDuration(0.01));
     //    image_queue_.callAvailable();
@@ -86,7 +87,7 @@ void System::Run() {
     ros::getGlobalCallbackQueue()->callAvailable();
     ReadFromSharedMemory(image, cam_info, transform, head_angles_);
     imageCallback(image);
-    r.sleep();
+    rate_->sleep();
   }
 }
 
@@ -653,6 +654,18 @@ void System::GUICommandCallBack(void* ptr, string sCommand, string sParams) {
     ros::shutdown();
 }
 
+bool System::SetPtamRate(ptam_com::SetPtamRateRequest& req,
+                         ptam_com::SetPtamRateResponse& resp) {
+  if (req.rate < 0 || 30 < req.rate ) {
+    resp.status = false;
+    return true;
+  }
+
+  delete rate_;
+  rate_ = new ros::Rate(req.rate);
+  resp.status = true;
+  return true;
+}
 
 
 

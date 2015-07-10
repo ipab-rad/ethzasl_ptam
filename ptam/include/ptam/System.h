@@ -25,6 +25,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <ptam_com/PointCloud.h>
 #include <ptam_com/KeyFrame_srv.h>
+#include <ptam_com/SetPtamRate.h>
 #include <std_msgs/String.h>
 #include <queue>
 
@@ -73,9 +74,11 @@ class System {
   ros::Publisher pub_info_;
   ros::ServiceServer srvPC_;
   ros::ServiceServer srvKF_;
+  ros::ServiceServer srvRate_;
 
   std::vector<float> head_angles_;
   ros::Publisher pub_pose_2d_;
+  ros::Rate* rate_;
 
   ros::CallbackQueue image_queue_;
 
@@ -111,6 +114,8 @@ class System {
                          ptam_com::PointCloudResponse& resp);
   bool keyframesservice(ptam_com::KeyFrame_srvRequest& req,
                         ptam_com::KeyFrame_srvResponse& resp);
+  bool SetPtamRate(ptam_com::SetPtamRateRequest& req,
+                   ptam_com::SetPtamRateResponse& resp);
 
   void imageCallback(sensor_msgs::Image& img);
   void imuCallback(const sensor_msgs::ImuConstPtr& msg);
