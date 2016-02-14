@@ -15,11 +15,14 @@
     <rosparam file="$(find ptam)/PtamFixParamsPS3Eye.yaml"/>
   </node>
 
-  <node
-    name="ptam_visualizer"
-    pkg="ptam"
-    type="ptam_visualizer"
-    output="screen"
-    machine="$(arg machine)"/>
+  <node name="ptam_visualizer"
+        pkg="ptam"
+        type="ptam_visualizer"
+        output="log"
+        machine="$(arg machine)">
+    <param name="ShowPC" type="bool" value="true"/>
+    <param name="ShowAllKFs" type="bool" value="true"/>
+    <param name="ShowPath" type="bool" value="true"/>
+  </node>
 </launch>
 
