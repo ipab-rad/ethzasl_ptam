@@ -562,6 +562,7 @@ bool System::keyframesservice(ptam_com::KeyFrame_srvRequest & req, ptam_com::Key
       t = transform.getOrigin();
       buffpose.header.seq=seq;
       buffpose.header.stamp=ros::Time::now();
+      buffpose.header.frame_id = PtamParameters::fixparams().parent_frame;
       buffpose.pose.pose.position.x=t[0];
       buffpose.pose.pose.position.y=t[1];
       buffpose.pose.pose.position.z=t[2];
