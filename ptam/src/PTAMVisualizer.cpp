@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
   path.id=0;
   path.lifetime=ros::Duration(1);
-  path.header.frame_id = "/world";
+  path.header.frame_id = "/ptam_world";
   path.header.stamp = ros::Time::now();
   path.ns = "pointcloud_publisher";
   path.action = visualization_msgs::Marker::ADD;

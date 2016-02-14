@@ -447,7 +447,7 @@ bool System::pointcloudservice(ptam_com::PointCloudRequest & req, ptam_com::Poin
   seq++;
   resp.pointcloud.header.stamp = ros::Time::now();
   resp.pointcloud.height = 1;
-  resp.pointcloud.header.frame_id = "/world";
+  resp.pointcloud.header.frame_id = PtamParameters::fixparams().parent_frame;
 
   if (!mpMap) return false;
 
