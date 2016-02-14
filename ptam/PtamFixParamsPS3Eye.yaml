@@ -36,17 +36,17 @@ AutoInitPixel: 20
 parent_frame: ptam_world
 
 # --- head_cam_320x240  ---
-# Cam_fx: 0.87999
-# Cam_fy: 1.16628
-# Cam_cx: 0.493726
-# Cam_cy: 0.463496
-# Cam_s: 0.471103
+Cam_fx: 0.87999
+Cam_fy: 1.16628
+Cam_cx: 0.493726
+Cam_cy: 0.463496
+Cam_s: 0.471103
 # --- head_cam_640x480  ---
-Cam_fx: 0.897336
-Cam_fy: 1.19905
-Cam_cx: 0.4805
-Cam_cy: 0.485488
-Cam_s: 0.182721
+# Cam_fx: 0.897336
+# Cam_fy: 1.19905
+# Cam_cx: 0.4805
+# Cam_cy: 0.485488
+# Cam_s: 0.182721
 # -------------------------
 
 
