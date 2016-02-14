@@ -43,8 +43,8 @@ System::System() :
   }
 
   image_transport::ImageTransport it(image_nh_);
-  sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this, image_transport::TransportHints("raw", ros::TransportHints().tcpNoDelay(true)));
-  pub_preview_image_ = it.advertise("vslam/preview", 1);
+  sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this, image_transport::TransportHints("compressed", ros::TransportHints().tcpNoDelay(true)));
+  pub_preview_image_ = it.advertise("vslam/preview", 1)
 }
 
 
@@ -90,8 +90,6 @@ void System::Run()
 void System::imageCallback(const sensor_msgs::ImageConstPtr & img)
 {
   //	static ros::Time t = img->header.stamp;
-
-
   ROS_ASSERT(img->encoding == sensor_msgs::image_encodings::MONO8 && img->step == img->width);
 
   const VarParams& varParams = PtamParameters::varparams();
@@ -266,7 +264,7 @@ bool System::transformPoint(const std::string & target_frame, const std_msgs::He
 
 void System::publishPoseAndInfo(const std_msgs::Header & header)
 {
-  
+
   double scale = PtamParameters::varparams().Scale;
 
   static float fps = 0;
@@ -423,7 +421,7 @@ void System::publishPreviewImage(CVD::Image<CVD::byte> & img, const std_msgs::He
     if (drawTrails)
     {
 
-      
+
       int level = PtamParameters::fixparams().InitLevel;
 
       for (std::list<Trail>::iterator i = trails.begin(); i != trails.end(); i++)
@@ -450,6 +448,9 @@ bool System::pointcloudservice(ptam_com::PointCloudRequest & req, ptam_com::Poin
   resp.pointcloud.header.stamp = ros::Time::now();
   resp.pointcloud.height = 1;
   resp.pointcloud.header.frame_id = "/world";
+
+  if (!mpMap) return false;
+
   if(mpMap->bGood)
   {
     resp.pointcloud.width = mpMap->vpPoints.size();
@@ -514,7 +515,7 @@ bool System::keyframesservice(ptam_com::KeyFrame_srvRequest & req, ptam_com::Key
   //			zero = send all available KeyFrames
   //			positive number = send all KeyFrames with ID>N
 
-  
+
   double scale = PtamParameters::varparams().Scale;
 
   TooN::SE3<double> pose;
