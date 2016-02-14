@@ -1,6 +1,8 @@
-ethzasl_ptam
+ipab-rad/ethzasl_ptam
 ============
 
-Modified version of Parallel Tracking and Mapping (PTAM) by George Klein. See http://wiki.ros.org/ethzasl_ptam for a detailed overview.
+This is a fork of the [ethzasl_ptam package](http://wiki.ros.org/ethzasl_ptam) which is modified for the research and projects we work on at the RAD Group.
 
-[![Build Status](http://129.132.38.183:8080/job/ethzasl_ptam/badge/icon)](http://129.132.38.183:8080/job/ethzasl_ptam/)
+There are sveral additions:
+* Nao branch which has a trimmed version of ptam so that it can be run the Nao
+* Launch files for ETG and PS3Eye
