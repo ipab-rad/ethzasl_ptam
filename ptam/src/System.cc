@@ -44,7 +44,7 @@ System::System() :
 
   image_transport::ImageTransport it(image_nh_);
   sub_image_ = it.subscribe(topic, 1, &System::imageCallback, this, image_transport::TransportHints("compressed", ros::TransportHints().tcpNoDelay(true)));
-  pub_preview_image_ = it.advertise("vslam/preview", 1)
+  pub_preview_image_ = it.advertise("vslam/preview", 1);
 }
 
 
