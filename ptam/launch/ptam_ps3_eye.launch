@@ -4,14 +4,13 @@
 
   <machine name="localhost" address="127.0.0.1" default="true"/>
 
-  <node
-    name="ptam"
-    pkg="ptam"
-    type="ptam"
-    clear_params="true"
-    output="screen"
-    machine="$(arg machine)">
-    <remap from="image" to="/head_cam/image_mono" />
+  <node name="ptam"
+        pkg="ptam"
+        type="ptam"
+        clear_params="true"
+        output="log"
+        machine="$(arg machine)">
+    <remap from="image" to="/head_cam/image_mono"/>
     <remap from="pose" to="pose"/>
     <rosparam file="$(find ptam)/PtamFixParamsPS3Eye.yaml"/>
   </node>
