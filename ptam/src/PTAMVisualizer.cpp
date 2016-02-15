@@ -64,11 +64,11 @@ int main(int argc, char **argv)
 
   srv_pc2.request.flags = 0;
   lastKFid=0;
-  tripodshistory.init(1, "/ptam_world");
+  tripodshistory.init(1, "ptam_world");
 
   path.id=0;
   path.lifetime=ros::Duration(1);
-  path.header.frame_id = "/ptam_world";
+  path.header.frame_id = "ptam_world";
   path.header.stamp = ros::Time::now();
   path.ns = "pointcloud_publisher";
   path.action = visualization_msgs::Marker::ADD;
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     {
       pub_kfs.publish(srv_kfs.response);
 
-      tripods.init(kf_lifetime_, "/ptam_world");
+      tripods.init(kf_lifetime_, "ptam_world");
       double pos[3], att[4];
       for(int i=srv_kfs.response.KFids.size()-1;!(i<0);--i)	//first element is newest KF
       {
