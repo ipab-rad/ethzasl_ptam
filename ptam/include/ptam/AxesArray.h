@@ -42,7 +42,7 @@ private:
 
 public:
   AxesArray(){ID=0;};
-  void init(double lifetime);	// shall we add here some init arguments?
+  void init(double lifetime, std::string frame_id);	// shall we add here some init arguments?
   bool addAxes(const double pos[3], const double att[4],unsigned int id);
   void clearAxes() {cubes.markers.clear();};
   visualization_msgs::MarkerArray getAxes(){return cubes;};
@@ -56,11 +56,11 @@ const double AxesArray::dirx[3]={AX_DIST,0.01,0.01};
 const double AxesArray::diry[3]={0.01,AX_DIST,0.01};
 const double AxesArray::dirz[3]={0.01,0.01,AX_DIST};
 
-void AxesArray::init(double lifetime)
+void AxesArray::init(double lifetime, std::string frame_id)
 {
   clearAxes();
   buffcube.lifetime=ros::Duration(lifetime);
-  buffcube.header.frame_id = "/world";
+  buffcube.header.frame_id = frame_id;
   buffcube.header.stamp = ros::Time::now();
   buffcube.ns = "pointcloud_publisher";
   buffcube.action = visualization_msgs::Marker::ADD;

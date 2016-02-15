@@ -64,7 +64,7 @@ int main(int argc, char **argv)
 
   srv_pc2.request.flags = 0;
   lastKFid=0;
-  tripodshistory.init(1);
+  tripodshistory.init(1, "/ptam_world");
 
   path.id=0;
   path.lifetime=ros::Duration(1);
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     {
       pub_kfs.publish(srv_kfs.response);
 
-      tripods.init(kf_lifetime_);
+      tripods.init(kf_lifetime_, "/ptam_world");
       double pos[3], att[4];
       for(int i=srv_kfs.response.KFids.size()-1;!(i<0);--i)	//first element is newest KF
       {
