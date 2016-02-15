@@ -1,6 +1,6 @@
 <launch>
     <node name="cameracalibrator" pkg="ptam" type="cameracalibrator" clear_params="true" output="screen">
-	    <remap from="image" to="/head_cam/image_raw" />
+	    <remap from="image" to="/head_cam/image_mono" />
             <remap from="pose" to="pose"/>
 	    <rosparam file="$(find ptam)/PtamFixParamsPS3Eye.yaml"/>
     </node>
