@@ -24,14 +24,15 @@ MaxPatchesPerFrame: 1000
 MaxKFDistWiggleMult: 1
 UseKFPixelDist: True
 NoLevelZeroMapPoints: False
-EpiDepthSearchMaxRange: 60
+EpiDepthSearchMaxRange: 45
 DisableCoarse: False
 CoarseMinVelocity: 0.4
 TrackingQualityFoundPixels: 20
 MaxIterations: 100
 MaxKF: 0
 FASTMethod: OAST16
-MaxStereoInitLoops: 4
+AdaptiveThrs: True
+MaxStereoInitLoops: 100
 AutoInitPixel: 20
 parent_frame: ptam_world
 
